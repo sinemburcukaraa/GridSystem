@@ -5,6 +5,6 @@ using UnityEngine;
 public class Tile : MonoBehaviour
 {
     public Sprite item;
-    public string id;
+    public int id;
     public Vector2Int Mypos;
 }

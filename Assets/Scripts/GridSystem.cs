@@ -10,12 +10,11 @@ using UnityEngine.UIElements;
 
 public class GridSystem : MonoBehaviour
 {
-    public GameObject prefab;
-    public Vector2Int gridSize;
-    [SerializeField] private int _scale;
-    
-    public float offset;
-    public List<TileContainer> tiles = new List<TileContainer>();
+    [SerializeField] private GameObject prefab;
+    [SerializeField] private Vector2Int gridSize;
+    [SerializeField] private int scale;
+    [SerializeField] private float offset;
+    [SerializeField] private List<TileContainer> tiles = new List<TileContainer>();
     public void CreateGrid()
     {
         ClearGrid();
@@ -37,21 +36,23 @@ public class GridSystem : MonoBehaviour
 
 
                 newobj.name = "(" + i + "," + j + ")";
-                newobj.GetComponent<Tile>().Mypos = new Vector2Int(i, j);
-                tiles.Add(new TileContainer(new Vector2Int(i, j), newobj.GetComponent<Tile>()));
+                Tile tile = newobj.GetComponent<Tile>();
+                tile.Mypos = new Vector2Int(i, j);
+                tiles.Add(new TileContainer(new Vector2Int(i, j), tile));
+
+                EditorUtility.SetDirty(tile);
             }
         }
         EditorUtility.SetDirty(this);
 #endif
     }
+
+
     private void CalculateGridParameters(out Vector3 tileScale, out float startX, out float startY, int _width, int _height)
     {
         float gridWidth = _width * offset;
         float gridHeight = _height * offset;
-        tileScale = new Vector3(_scale, _scale, 1f);
-
-        float screenWidth = Screen.width;
-        float screenHeight = Screen.height;
+        tileScale = new Vector3(scale, scale, 1f);
 
         startX = -(gridWidth - offset) / 2;
         startY = (gridHeight - offset) / 2;
@@ -62,24 +63,28 @@ public class GridSystem : MonoBehaviour
 #if UNITY_EDITOR
         foreach (var item in tiles)
         {
-            DestroyImmediate(item.myTile.gameObject);
+            DestroyImmediate(item.myTile.gameObject, true);
         }
 
         tiles.Clear();
         EditorUtility.SetDirty(this);
 #endif
     }
-    public GameObject FindGridObject(Vector2Int position)
+    public Tile FindGridObject(Vector2Int position)
     {
-        return tiles.FirstOrDefault(item => item.myPos == position)?.myTile.gameObject;
+        var TileToReturn = tiles.FirstOrDefault(item => item.myPos == position).myTile;
+        if (TileToReturn == null)
+            Debug.Log("Either the Tile list is empty or the position is outside of the grid position");
+        return TileToReturn;
     }
     public void Resort()
     {
-#if UNITY_EDITOR
         tiles = tiles.OrderBy(tile => tile.myTile.transform.position.x)
                      .ThenByDescending(tile => tile.myTile.transform.position.y)
                      .ToList();
-        EditorUtility.SetDirty(this);
+#if UNITY_EDITOR
+        if(Application.isPlaying == false)
+            EditorUtility.SetDirty(this);
 #endif
     }
 
@@ -98,10 +103,9 @@ public class GridSystem : MonoBehaviour
 }
 
 [CustomEditor(typeof(GridSystem))]
-public class EditorTest : Editor
+public class GridSystemEditor : Editor
 {
-    public bool isActive;
-    public int test;
+    private bool isActive;
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
